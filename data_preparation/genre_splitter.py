@@ -1,28 +1,37 @@
 # This script splits the dataset into separate JSON files based on genres.
 
-def split_by_genres(data_path, output_dir):
-    import os
-    import json
-    json_path = os.path.join(data_path, 'metadata.json')
-    with open(json_path, 'r') as f:
-        json_data = json.load(f)
-
-    genre_dict = {}
-    for item in json_data:
-        genres = item.get('genre', [])
-        for genre in genres:
-            if genre not in genre_dict:
-                genre_dict[genre] = []
-            genre_dict[genre].append(item)
-
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    for genre, items in genre_dict.items():
-        output_path = os.path.join(output_dir, f'{genre}.json')
-        with open(output_path, 'w') as f:
-            json.dump(items, f, indent=4)
-
+import pathlib
+import os
+import json
+import shutil
+import tqdm
+METADATA_PATH = os.path.join("raw_data", 'metadata.json')
+METADATA_JSON = None 
+with open(METADATA_PATH, 'r') as f:
+        METADATA_JSON = json.load(f)
+def split_by_genres():
+# Get all subdirectories and sort them
+    genre_dict = {} 
+    dirs = sorted([d for d in pathlib.Path('raw_data').iterdir() if d.is_dir()])
+    for directory in dirs:
+        filenames = [entry.name for entry in pathlib.Path(directory).iterdir() if entry.is_file()]
+        for f in filenames:
+           id = int(f.split("_")[0])
+           file_genre = METADATA_JSON[f"{id}"]["metadata"].get("genre")
+           if file_genre is None:
+                file_genre = "UNK"
+           if file_genre in genre_dict:
+                genre_dict[file_genre].append(os.path.join("raw_data",directory.name,f))
+           else:
+                genre_dict[file_genre] = [os.path.join("raw_data",directory.name,f)]
+    for genre, files in tqdm.tqdm(genre_dict.items()):
+        output_path = os.path.join("prepared_data", genre)
+        if genre == "classical":
+             continue
+        os.makedirs(output_path,exist_ok=True)
+        for f in tqdm.tqdm(files):
+            shutil.copy(f,output_path)
+split_by_genres()
 """
 import pathlib
 # Get all subdirectories and sort them
