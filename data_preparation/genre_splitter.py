@@ -26,8 +26,6 @@ def split_by_genres():
                 genre_dict[file_genre] = [os.path.join("raw_data",directory.name,f)]
     for genre, files in tqdm.tqdm(genre_dict.items()):
         output_path = os.path.join("prepared_data", genre)
-        if genre == "classical":
-             continue
         os.makedirs(output_path,exist_ok=True)
         for f in tqdm.tqdm(files):
             shutil.copy(f,output_path)
