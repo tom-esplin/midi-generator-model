@@ -13,7 +13,7 @@ def train_tokenizer(sample_size: int = 0,midi_genre: str = "classical", vocab_si
     print(f"Directory exists: {search_path.exists()}")
     if not search_path.exists():
         raise RuntimeError("Make sure to run from the top level of directory")
-    midis = list(Path("prepared_data",midi_genre).glob("*.mid"))
+    midis = list(search_path.glob("*.mid"))
     time_stamp = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
     tokenizer_exp_name = f"{midi_genre}-{sample_size}-{time_stamp}"
     if sample_size != 0:
@@ -23,7 +23,7 @@ def train_tokenizer(sample_size: int = 0,midi_genre: str = "classical", vocab_si
     os.makedirs(exp_path)
     pre_tokens_path = Path("tokenization","saved_tokens",tokenizer_exp_name,"pre_tokens")
     os.mkdir(pre_tokens_path)
-    tokenizer.tokenize_midi_dataset(midis,pre_tokens_path)
+    tokenizer.tokenize_dataset(midis,pre_tokens_path)
     token_paths = list((pre_tokens_path).glob("*.json"))
     tokenizer.train(
         vocab_size=vocab_size,
