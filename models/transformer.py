@@ -80,7 +80,7 @@ class TransformerDecoder(nn.Module):
         dropout - dropout probability: used in PositionalEncoding, PositionalFeedForward, and AddAndNorm
         """
         super().__init__()
-        self.embedder = nn(vocab_size,d_model)
+        self.embedder = nn.Embedding(vocab_size,d_model)
         self.pos_encoder = PositionalEncoding(d_model,dropout)
         self.decoder_layers = nn.ModuleList([DecoderLayer(d_model,d_ff,h,dropout) for i in range(N)])
         self.final_linear = nn.Linear(d_model,vocab_size)
