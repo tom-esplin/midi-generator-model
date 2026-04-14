@@ -29,7 +29,7 @@ class MidiDataset(Dataset):
         self.folder_path = folder_path
         self.preload_to_ram = preload_to_ram
         self.parquet_path = parquet_path
-        self.chunk_size = chunk_size
+        self.chunk_size = chunk_size + 1
         self.pad_token = pad_token
         self.midis = None
         
@@ -73,7 +73,8 @@ class MidiDataset(Dataset):
             with open(path, 'rb') as f:
                 json_data = orjson.loads(f.read())
             midi = torch.tensor(json_data['ids'], dtype=torch.long)
-        
+
+        midi = midi.flatten()
         seq_len = len(midi)
         
         if seq_len > self.chunk_size:
@@ -130,23 +131,23 @@ class ContinuousMidiDataset(Dataset):
 # --- Execution ---
 # Note: Ensure all your sequences are the exact same length, otherwise DataLoader will crash!
 # If they are not, you will need to add a custom `collate_fn` to the DataLoader to pad them.
+if __name__ == "__main__":
+    midi_dataset = MidiDataset(
+        folder_path="tokenization/saved_tokens/jazz-0-30-03-2026_18-56-02/test", 
+        preload_to_ram=True
+    )
 
-midi_dataset = MidiDataset(
-    folder_path="tokenization/saved_tokens/jazz-0-30-03-2026_18-56-02/test", 
-    preload_to_ram=True
-)
+    midi_loader = DataLoader(midi_dataset, batch_size=32, shuffle=True)
 
-midi_loader = DataLoader(midi_dataset, batch_size=32, shuffle=True)
+    for batch in midi_loader:
+        print("\nBatch shape:", batch.shape)
+        break # Just testing the first batch
 
-for batch in midi_loader:
-    print("\nBatch shape:", batch.shape)
-    break # Just testing the first batch
+    midi_dataset_continuous = ContinuousMidiDataset(
+        folder_path="tokenization/saved_tokens/jazz-0-30-03-2026_18-56-02/test",
+        chunk_size=2048)
+    midi_loader_continuous = DataLoader(midi_dataset_continuous, batch_size=32, shuffle=True)  
 
-midi_dataset_continuous = ContinuousMidiDataset(
-    folder_path="tokenization/saved_tokens/jazz-0-30-03-2026_18-56-02/test",
-    chunk_size=2048)
-midi_loader_continuous = DataLoader(midi_dataset_continuous, batch_size=32, shuffle=True)  
-
-for batch in midi_loader_continuous:
-    print("\nContinuous Batch shape:", batch.shape)
-    break # Just testing the first batch
+    for batch in midi_loader_continuous:
+        print("\nContinuous Batch shape:", batch.shape)
+        break # Just testing the first batch
