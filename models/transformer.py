@@ -97,3 +97,36 @@ class TransformerDecoder(nn.Module):
             decode_output = layer(decode_output, mask)
 
         return self.final_linear(decode_output)
+    
+
+import torch
+import torch.nn as nn
+class OptimizedTransformer(nn.Module):
+    def __init__(self, vocab_size, d_model, nhead, num_layers, max_seq_len):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, d_model)
+        
+        # Positional encoding (standard sine/cosine or learned)
+        self.pos_encoder = nn.Embedding(max_seq_len, d_model) 
+        
+        # We use a TransformerEncoder as a causal model by applying a strict mask
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model, nhead=nhead, batch_first=True
+        )
+        self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+        self.fc_out = nn.Linear(d_model, vocab_size)
+
+    def forward(self, x, mask):
+        # x shape: (batch_size, seq_len)
+        seq_len = x.size(1)
+        positions = torch.arange(0, seq_len, device=x.device).unsqueeze(0)
+        
+        # Combine token embeddings with positional embeddings
+        x = self.embedding(x) + self.pos_encoder(positions)
+        
+        # Pass through transformer WITH the causal mask
+        out = self.transformer(x, mask=mask, is_causal=True)
+        
+        # Map to vocabulary size
+        logits = self.fc_out(out) 
+        return logits
