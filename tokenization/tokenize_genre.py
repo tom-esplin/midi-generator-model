@@ -21,26 +21,25 @@ def train_tokenizer(sample_size: int = 0,midi_genre: str = "classical", vocab_si
         sample_size = 25000 
     if sample_size != 0:
         midis = random.sample(midis,sample_size)
-    tokenizer = PerTok(TokenizerConfig(pitch_range=pitch_range,use_chords=use_chords,ticks_per_quarter=tick_division,beat_res={(0, 4): 8, (0, 4): 12},use_microtiming=True,max_microtiming_shift=0.5,num_microtiming_bins = 50))
+    tokenizer = PerTok(TokenizerConfig(pitch_range=pitch_range,use_chords=use_chords,ticks_per_quarter=tick_division,beat_res={(0, 4): 8, (4, 12): 12},use_microtiming=True,max_microtiming_shift=0.5,num_microtiming_bins = 50))
     exp_path = Path("tokenization","saved_tokens",tokenizer_exp_name)
-    os.makedirs(exp_path)
+    os.makedirs(exp_path,exist_ok=True)
     pre_tokens_path = Path("tokenization","saved_tokens",tokenizer_exp_name,"pre_tokens")
     os.mkdir(pre_tokens_path)
-    tokenizer.tokenize_dataset(midis,pre_tokens_path)
-    token_paths = list((pre_tokens_path).glob("*.json"))
+    print(len(midis))
     tokenizer.train(
         vocab_size=vocab_size,
         model= tokenizer_model,
-        files_paths=token_paths
+        files_paths=midis
     )
-    tokenizer.save(Path(exp_path,"tokenizer.json"))
+    tokenizer.save_params(Path(exp_path,"tokenizer.json"))
     print(tokenizer.vocab_size)
     print()
     print(tokenizer.special_tokens)
     time.sleep(10)
     return exp_path
 
-def tokenize_genre(exp_path: str, midi_genre: str):
+def tokenize_genre(exp_path: Path, midi_genre: str):
     test_search_path = Path("prepared_data", midi_genre,"test")
     train_search_path = Path("prepared_data", midi_genre,"train")
     if not test_search_path.exists() or not train_search_path.exists():
@@ -51,3 +50,4 @@ def tokenize_genre(exp_path: str, midi_genre: str):
         tokenized_output_path = Path("tokenization","saved_tokens",exp_path.name,path.name)
         os.makedirs(tokenized_output_path,exist_ok=True)
         tokenizer.tokenize_midi_dataset(midis,tokenized_output_path)
+tokenize_genre(Path("tokenization","saved_tokens","folk-0-04-04-2026_12-22-01"), "folk")
