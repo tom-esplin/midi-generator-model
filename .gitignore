@@ -1,3 +1,5 @@
 raw_data/
 prepared_data/
 tokenization/saved_tokens/
+*.mid
+.env
