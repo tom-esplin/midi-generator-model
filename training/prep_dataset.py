@@ -5,22 +5,49 @@ import glob
 import os
 import orjson
 import numpy as np  
-def convert_json_to_parquet(json_folder, output_file):
+def convert_json_to_parquet(json_folder, output_file, strict=False, log_skipped=True):
+    """Convert every `*.json` file in `json_folder` into a single Parquet table.
+
+    Corrupt/truncated JSON files are skipped with a warning by default. Pass
+    `strict=True` to re-raise the original exception instead.
+    """
     json_files = glob.glob(os.path.join(json_folder, "*.json"))
     data_list = []
-    
-    # 1. Use orjson for reading (much faster than pd.read_json for thousands of files)
+    skipped = []
+
     for f in json_files:
-        with open(f, 'rb') as file:
-            data = orjson.loads(file.read())
-            data_list.append(data["ids"])
-            
-    # 2. Store as a single column to prevent Pandas from making thousands of NaN-padded columns
+        try:
+            with open(f, 'rb') as file:
+                raw = file.read()
+            if not raw:
+                raise ValueError("empty file")
+            data = orjson.loads(raw)
+            ids = data.get("ids") if isinstance(data, dict) else None
+            if not ids:
+                raise ValueError("missing or empty 'ids' field")
+            data_list.append(ids)
+        except (orjson.JSONDecodeError, ValueError, OSError) as exc:
+            if strict:
+                raise RuntimeError(f"Failed to parse {f}: {exc}") from exc
+            skipped.append((f, str(exc)))
+
+    if skipped and log_skipped:
+        print(f"Skipped {len(skipped)} unreadable JSON file(s):")
+        for path, reason in skipped[:10]:
+            print(f"  - {os.path.basename(path)}: {reason}")
+        if len(skipped) > 10:
+            print(f"  ... and {len(skipped) - 10} more")
+
+    if not data_list:
+        raise RuntimeError(
+            f"No valid JSON files found in {json_folder} "
+            f"(scanned {len(json_files)}, all skipped or empty)"
+        )
+
     df = pd.DataFrame({'ids': data_list})
-    
-    # 3. Save as Parquet
     df.to_parquet(output_file, engine='pyarrow', compression='snappy')
-    print(f"Success! Converted {len(json_files)} files into {output_file}")
+    print(f"Success! Converted {len(data_list)}/{len(json_files)} files into {output_file}")
+    return skipped
 
 
 class MidiDataset(Dataset):
@@ -70,9 +97,14 @@ class MidiDataset(Dataset):
             midi = torch.tensor(clean_data, dtype=torch.long)
         else:
             path = self.file_paths[idx]
-            with open(path, 'rb') as f:
-                json_data = orjson.loads(f.read())
-            midi = torch.tensor(json_data['ids'], dtype=torch.long)
+            try:
+                with open(path, 'rb') as f:
+                    json_data = orjson.loads(f.read())
+                ids = json_data['ids']
+            except (orjson.JSONDecodeError, ValueError, KeyError, OSError) as exc:
+                print(f"Warning: skipping corrupt file {path}: {exc}")
+                return self.__getitem__((idx + 1) % len(self.file_paths))
+            midi = torch.tensor(ids, dtype=torch.long)
 
         midi = midi.flatten()
         seq_len = len(midi)
