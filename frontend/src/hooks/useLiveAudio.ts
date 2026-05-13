@@ -1,16 +1,40 @@
 import { useEffect, useRef } from 'react';
 import * as Tone from 'tone';
 import { useNoteStore } from '../lib/noteStore';
+import type { SynthConfig } from '../lib/noteStore';
 import { midiToNoteName } from '../lib/midiHelpers';
+import { buildSynthChain, applySynthConfig } from '../lib/synthEngine';
+import type { SynthChain } from '../lib/synthEngine';
+
+function configNeedsRebuild(a: SynthConfig, b: SynthConfig): boolean {
+  return a.instrument !== b.instrument
+    || a.attack !== b.attack || a.decay !== b.decay
+    || a.sustain !== b.sustain || a.release !== b.release;
+}
 
 export function useLiveAudio() {
-  const synthRef = useRef<Tone.PolySynth | null>(null);
+  const chainRef = useRef<SynthChain | null>(null);
   const prevPitches = useRef(new Set<number>());
   const audioStarted = useRef(false);
+  const prevConfig = useRef<SynthConfig | null>(null);
 
   useEffect(() => {
     const unsubscribe = useNoteStore.subscribe((state) => {
+      const cfg = state.synthConfig;
       const currentPitches = new Set(state.activeNotes.keys());
+
+      // Rebuild synth if oscillator or envelope changed
+      if (prevConfig.current && configNeedsRebuild(prevConfig.current, cfg) && chainRef.current) {
+        chainRef.current.dispose();
+        chainRef.current = null;
+      }
+
+      // Live-update effect parameters without rebuild
+      if (chainRef.current && prevConfig.current) {
+        applySynthConfig(chainRef.current, cfg);
+      }
+
+      prevConfig.current = cfg;
 
       const added = [...currentPitches].filter((p) => !prevPitches.current.has(p));
       const removed = [...prevPitches.current].filter((p) => !currentPitches.has(p));
@@ -19,19 +43,14 @@ export function useLiveAudio() {
 
       if (!audioStarted.current) {
         Tone.start();
-        Tone.getContext().lookAhead = 0.01;
         audioStarted.current = true;
       }
 
-      if (!synthRef.current) {
-        synthRef.current = new Tone.PolySynth(Tone.Synth, {
-          maxPolyphony: 16,
-          oscillator: { type: 'triangle' },
-          envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.4 },
-        }).toDestination();
+      if (!chainRef.current) {
+        chainRef.current = buildSynthChain(cfg);
       }
 
-      const synth = synthRef.current;
+      const synth = chainRef.current.synth;
 
       for (const pitch of added) {
         const info = state.activeNotes.get(pitch);
@@ -48,7 +67,8 @@ export function useLiveAudio() {
 
     return () => {
       unsubscribe();
-      synthRef.current?.releaseAll();
+      chainRef.current?.dispose();
+      chainRef.current = null;
     };
   }, []);
 }

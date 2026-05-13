@@ -71,17 +71,21 @@ export function useMetronome() {
         return;
       }
 
-      store.setCountInBeat(beat);
-
-      const synth = beat % 4 === 0 ? clickHi.current! : clickLo.current!;
-      const note = beat % 4 === 0 ? 'G5' : 'C5';
-      synth.triggerAttackRelease(note, '32n');
-
-      beat++;
+      // After all 4 clicks have played, wait one full beat then start recording
+      // so recording begins on the downbeat (beat 1) of the next measure.
       if (beat >= COUNT_IN_BEATS) {
         stopTicking();
         store.beginRecording();
+        return;
       }
+
+      store.setCountInBeat(beat);
+
+      const synth = beat === 0 ? clickHi.current! : clickLo.current!;
+      const clickNote = beat === 0 ? 'G5' : 'C5';
+      synth.triggerAttackRelease(clickNote, '32n');
+
+      beat++;
     };
 
     tick();

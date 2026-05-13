@@ -11,6 +11,8 @@ export interface GenerateRequest {
   notes: NoteEvent[];
   tempo: number;
   genre: string;
+  lengthMeasures: number;
+  startMeasure: number;
 }
 
 export interface GenerateResponse {

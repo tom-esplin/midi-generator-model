@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNoteStore } from '../lib/noteStore';
 import { useAudioPlayback } from '../hooks/useAudioPlayback';
 import { generateMidi } from '../lib/midiApi';
+import GenerateModal from './GenerateModal';
 
 export default function RecordingControls() {
   const recordingState = useNoteStore((s) => s.recordingState);
@@ -24,16 +25,28 @@ export default function RecordingControls() {
 
   const { playNotes, stopAll } = useAudioPlayback();
 
+  const [modalOpen, setModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (config: {
+    genre: string;
+    lengthMeasures: number;
+    startMeasure: number;
+  }) => {
     if (notes.length === 0) return;
     setIsGenerating(true);
     setError(null);
     try {
-      const res = await generateMidi({ notes, tempo, genre: 'jazz' });
+      const res = await generateMidi({
+        notes,
+        tempo,
+        genre: config.genre,
+        lengthMeasures: config.lengthMeasures,
+        startMeasure: config.startMeasure,
+      });
       setGeneratedNotes(res.notes);
+      setModalOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Generation failed');
     } finally {
@@ -74,7 +87,6 @@ export default function RecordingControls() {
   return (
     <div className="controls-container">
       <div className="controls-row">
-        {/* Record / Pause / Resume / Count-in */}
         {recordingState === 'idle' || recordingState === 'stopped' ? (
           <button className="btn btn-record" onClick={startRecording} disabled={!canRecord}>
             <span className="btn-icon record-icon" />
@@ -97,12 +109,10 @@ export default function RecordingControls() {
           </button>
         )}
 
-        {/* Play */}
         <button className="btn btn-play" onClick={handlePlay} disabled={!canPlay}>
           &#9654; Play
         </button>
 
-        {/* Stop */}
         <button className="btn btn-stop" onClick={handleStop} disabled={!isActive}>
           <span className="btn-icon stop-icon" />
           Stop
@@ -173,15 +183,11 @@ export default function RecordingControls() {
       <div className="controls-row">
         <button
           className="btn btn-generate"
-          onClick={handleGenerate}
+          onClick={() => setModalOpen(true)}
           disabled={notes.length === 0 || isGenerating || isActive}
         >
-          {isGenerating ? (
-            <span className="spinner" />
-          ) : (
-            <span className="btn-icon generate-icon">&#9733;</span>
-          )}
-          {isGenerating ? 'Generating...' : 'Generate'}
+          <span className="btn-icon generate-icon">&#9733;</span>
+          Generate
         </button>
       </div>
 
@@ -196,6 +202,13 @@ export default function RecordingControls() {
           {isPlaying ? 'PLAYING' : isCountingIn ? 'COUNT IN' : recordingState.toUpperCase()}
         </span>
       </div>
+
+      <GenerateModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onGenerate={handleGenerate}
+        isGenerating={isGenerating}
+      />
     </div>
   );
 }

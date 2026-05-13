@@ -1,6 +1,7 @@
 import Piano from './components/Piano';
 import PianoRoll from './components/PianoRoll';
 import RecordingControls from './components/RecordingControls';
+import SynthConfig from './components/SynthConfig';
 import KeyboardGuide from './components/KeyboardGuide';
 import { useMIDIInput } from './hooks/useMIDIInput';
 import { useKeyboardInput } from './hooks/useKeyboardInput';
@@ -46,6 +47,7 @@ export default function App() {
         </section>
 
         <section className="section-piano">
+          <SynthConfig />
           <Piano />
         </section>
 

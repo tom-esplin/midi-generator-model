@@ -2,48 +2,51 @@ import { useRef, useCallback } from 'react';
 import * as Tone from 'tone';
 import type { NoteEvent } from '../lib/types';
 import { midiToNoteName } from '../lib/midiHelpers';
+import { useNoteStore } from '../lib/noteStore';
+import { buildSynthChain } from '../lib/synthEngine';
+import type { SynthChain } from '../lib/synthEngine';
 
 export function useAudioPlayback() {
-  const synthRef = useRef<Tone.PolySynth | null>(null);
+  const chainRef = useRef<SynthChain | null>(null);
 
-  const ensureSynth = useCallback(() => {
-    if (!synthRef.current) {
-      Tone.getContext().lookAhead = 0.01;
-      synthRef.current = new Tone.PolySynth(Tone.Synth, {
-        oscillator: { type: 'triangle' },
-        envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.4 },
-      }).toDestination();
+  const ensureChain = useCallback(() => {
+    if (!chainRef.current) {
+      const cfg = useNoteStore.getState().synthConfig;
+      chainRef.current = buildSynthChain(cfg);
     }
-    return synthRef.current;
+    return chainRef.current;
   }, []);
 
   const playNote = useCallback(
     async (pitch: number, velocity: number, duration = 0.3) => {
       await Tone.start();
-      const synth = ensureSynth();
+      const chain = ensureChain();
       const name = midiToNoteName(pitch);
       const vol = Tone.gainToDb(velocity / 127);
-      synth.triggerAttackRelease(name, duration, Tone.now(), Tone.dbToGain(vol));
+      chain.synth.triggerAttackRelease(name, duration, Tone.now(), Tone.dbToGain(vol));
     },
-    [ensureSynth],
+    [ensureChain],
   );
 
   const playNotes = useCallback(
     async (notes: NoteEvent[]) => {
       await Tone.start();
-      const synth = ensureSynth();
+      const chain = ensureChain();
       const now = Tone.now();
 
       for (const n of notes) {
         const name = midiToNoteName(n.pitch);
-        synth.triggerAttackRelease(name, n.duration, now + n.startTime);
+        chain.synth.triggerAttackRelease(name, n.duration, now + n.startTime);
       }
     },
-    [ensureSynth],
+    [ensureChain],
   );
 
   const stopAll = useCallback(() => {
-    synthRef.current?.releaseAll();
+    if (chainRef.current) {
+      chainRef.current.dispose();
+      chainRef.current = null;
+    }
   }, []);
 
   return { playNote, playNotes, stopAll };

@@ -1,6 +1,60 @@
 import { create } from 'zustand';
 import type { NoteEvent, RecordingState } from './types';
 
+export type OscillatorType =
+  | 'sine' | 'square' | 'sawtooth' | 'triangle'
+  | 'fmsine' | 'fmsquare' | 'fmsawtooth' | 'fmtriangle'
+  | 'amsine' | 'amsquare' | 'amsawtooth' | 'amtriangle'
+  | 'fatsine' | 'fatsquare' | 'fatsawtooth' | 'fattriangle';
+
+export type FilterType = 'lowpass' | 'highpass' | 'bandpass';
+
+export interface SynthConfig {
+  instrument: OscillatorType;
+  attack: number;
+  decay: number;
+  sustain: number;
+  release: number;
+  filterEnabled: boolean;
+  filterType: FilterType;
+  filterFreq: number;
+  filterQ: number;
+  reverbEnabled: boolean;
+  reverbMix: number;
+  reverbDecay: number;
+  delayEnabled: boolean;
+  delayMix: number;
+  delayTime: number;
+  delayFeedback: number;
+  chorusEnabled: boolean;
+  chorusMix: number;
+  distortionEnabled: boolean;
+  distortionAmount: number;
+}
+
+export const DEFAULT_SYNTH_CONFIG: SynthConfig = {
+  instrument: 'triangle',
+  attack: 0.005,
+  decay: 0.1,
+  sustain: 0.3,
+  release: 0.4,
+  filterEnabled: false,
+  filterType: 'lowpass',
+  filterFreq: 2000,
+  filterQ: 1,
+  reverbEnabled: false,
+  reverbMix: 0.3,
+  reverbDecay: 2,
+  delayEnabled: false,
+  delayMix: 0.25,
+  delayTime: 0.3,
+  delayFeedback: 0.3,
+  chorusEnabled: false,
+  chorusMix: 0.3,
+  distortionEnabled: false,
+  distortionAmount: 0.2,
+};
+
 interface NoteStore {
   notes: NoteEvent[];
   generatedNotes: NoteEvent[];
@@ -14,6 +68,7 @@ interface NoteStore {
   metronomeOn: boolean;
   isPlaying: boolean;
   playbackStartedAt: number | null;
+  synthConfig: SynthConfig;
 
   startRecording: () => void;
   beginRecording: () => void;
@@ -36,6 +91,7 @@ interface NoteStore {
   setCursorTime: (t: number) => void;
   setCountInBeat: (beat: number) => void;
   setMetronomeOn: (on: boolean) => void;
+  updateSynthConfig: (patch: Partial<SynthConfig>) => void;
 }
 
 function quantizeTo16th(timeInSeconds: number, tempo: number): number {
@@ -55,6 +111,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   metronomeOn: true,
   isPlaying: false,
   playbackStartedAt: null,
+  synthConfig: { ...DEFAULT_SYNTH_CONFIG },
 
   startRecording: () => {
     const { isPlaying } = get();
@@ -114,7 +171,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   noteOn: (pitch, velocity) => {
     const { recordingState, recordingStartTime } = get();
     const now = performance.now() / 1000;
-
     const next = new Map(get().activeNotes);
     const startTime = recordingState === 'recording' && recordingStartTime != null
       ? now - recordingStartTime
@@ -126,7 +182,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   noteOff: (pitch) => {
     const { recordingState, recordingStartTime, tempo, activeNotes } = get();
     const noteInfo = activeNotes.get(pitch);
-
     const next = new Map(activeNotes);
     next.delete(pitch);
     set({ activeNotes: next });
@@ -170,4 +225,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   setCursorTime: (t) => set({ cursorTime: t }),
   setCountInBeat: (beat) => set({ countInBeat: beat }),
   setMetronomeOn: (on) => set({ metronomeOn: on }),
+  updateSynthConfig: (patch) =>
+    set((s) => ({ synthConfig: { ...s.synthConfig, ...patch } })),
 }));

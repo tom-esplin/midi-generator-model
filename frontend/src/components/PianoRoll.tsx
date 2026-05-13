@@ -210,6 +210,25 @@ export default function PianoRoll() {
           ctx.fill();
           ctx.stroke();
         });
+      } else if (activeNotes.size > 0) {
+        // Preview held notes as small highlights near the left edge of the viewport
+        const sc = gridRef.current;
+        const viewLeft = sc ? sc.scrollLeft : 0;
+        const previewX = viewLeft + 8;
+        const previewW = 30;
+        activeNotes.forEach((_, pitch) => {
+          const row = MAX_PITCH - 1 - pitch;
+          if (row < 0 || row >= TOTAL_ROWS) return;
+          const y = row * ROW_HEIGHT + 1;
+          const h = ROW_HEIGHT - 2;
+          ctx.fillStyle = ACTIVE_FILL;
+          ctx.strokeStyle = ACTIVE_STROKE;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(previewX, y, previewW, h, 2);
+          ctx.fill();
+          ctx.stroke();
+        });
       }
 
       // Cursor line
@@ -238,14 +257,21 @@ export default function PianoRoll() {
     };
   }, []); // stable — reads everything from store/ref
 
-  // Initial vertical scroll → center on C4
+  // Initial vertical scroll → center on C4 (deferred so canvas is sized first)
   useEffect(() => {
-    if (didInitScroll.current || !gridRef.current) return;
-    didInitScroll.current = true;
-    const sc = gridRef.current;
-    const c4Row = MAX_PITCH - 1 - 60;
-    sc.scrollTop = Math.max(0, c4Row * ROW_HEIGHT - sc.clientHeight / 2);
-    if (labelRef.current) labelRef.current.scrollTop = sc.scrollTop;
+    if (didInitScroll.current) return;
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (didInitScroll.current || !gridRef.current) return;
+        didInitScroll.current = true;
+        const sc = gridRef.current;
+        const c4Row = MAX_PITCH - 1 - 60;
+        const targetY = c4Row * ROW_HEIGHT - sc.clientHeight / 2;
+        sc.scrollTop = Math.max(0, targetY);
+        if (labelRef.current) labelRef.current.scrollTop = sc.scrollTop;
+      });
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   const handleGridScroll = useCallback(() => {
