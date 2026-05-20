@@ -340,19 +340,19 @@ def build_model_configs(vocab_size, chunk_size=CHUNK_SIZE):
             "num_layers": num_layers,
             "hidden_dim": hidden_dim,
         },
-        {
-            "name": "homebrew_gru",
-            "factory": lambda: GRUModel(vocab_size, embedding_dim, hidden_dim, num_layers),
-            "optimizer_factory": lambda m: Adam(m.parameters(), lr=1e-3),
-            "scheduler_factory": None,
-            "needs_mask": False,
-            "needs_hidden": True,
-            "stepwise": True,
-            "use_amp": False,
-            "grad_clip": None,
-            "num_layers": num_layers,
-            "hidden_dim": hidden_dim,
-        },
+        # {
+        #     "name": "homebrew_gru",
+        #     "factory": lambda: GRUModel(vocab_size, embedding_dim, hidden_dim, num_layers),
+        #     "optimizer_factory": lambda m: Adam(m.parameters(), lr=1e-3),
+        #     "scheduler_factory": None,
+        #     "needs_mask": False,
+        #     "needs_hidden": True,
+        #     "stepwise": True,
+        #     "use_amp": False,
+        #     "grad_clip": None,
+        #     "num_layers": num_layers,
+        #     "hidden_dim": hidden_dim,
+        # },
         {
             "name": "optimized_transformer",
             "factory": lambda: OptimizedTransformer(
@@ -374,20 +374,20 @@ def build_model_configs(vocab_size, chunk_size=CHUNK_SIZE):
             "grad_clip": 1.0,
             "batch_size": 16,
         },
-        {
-            "name": "homebrew_transformer",
-            "factory": lambda: TransformerDecoder(
-                vocab_size, N=num_layers, d_model=d_model, d_ff=d_ff, h=nhead,
-            ),
-            "optimizer_factory": lambda m: Adam(m.parameters(), lr=5e-4),
-            "scheduler_factory": None,
-            "needs_mask": True,
-            "needs_hidden": False,
-            "stepwise": False,
-            "use_amp": False,
-            "grad_clip": None,
-            "batch_size": 8,
-        },
+        # {
+        #     "name": "homebrew_transformer",
+        #     "factory": lambda: TransformerDecoder(
+        #         vocab_size, N=num_layers, d_model=d_model, d_ff=d_ff, h=nhead,
+        #     ),
+        #     "optimizer_factory": lambda m: Adam(m.parameters(), lr=5e-4),
+        #     "scheduler_factory": None,
+        #     "needs_mask": True,
+        #     "needs_hidden": False,
+        #     "stepwise": False,
+        #     "use_amp": False,
+        #     "grad_clip": None,
+        #     "batch_size": 8,
+        # },
     ]
 
 
