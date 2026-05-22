@@ -4,7 +4,6 @@ import { useNoteStore } from '../lib/noteStore';
 const GENRES = [
   'soundtrack',
   'jazz',
-  'folk',
   'classical',
 ] as const;
 

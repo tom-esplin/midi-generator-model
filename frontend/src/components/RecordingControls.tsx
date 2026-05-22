@@ -22,6 +22,10 @@ export default function RecordingControls() {
   const setGeneratedNotes = useNoteStore((s) => s.setGeneratedNotes);
   const setTempo = useNoteStore((s) => s.setTempo);
   const setMetronomeOn = useNoteStore((s) => s.setMetronomeOn);
+  const editMode = useNoteStore((s) => s.editMode);
+  const setEditMode = useNoteStore((s) => s.setEditMode);
+  const helpMode = useNoteStore((s) => s.helpMode);
+  const setHelpMode = useNoteStore((s) => s.setHelpMode);
 
   const { playNotes, stopAll } = useAudioPlayback();
 
@@ -88,17 +92,33 @@ export default function RecordingControls() {
     <div className="controls-container">
       <div className="controls-row">
         {recordingState === 'idle' || recordingState === 'stopped' ? (
-          <button className="btn btn-record" onClick={startRecording} disabled={!canRecord}>
+          <button
+            className="btn btn-record"
+            onClick={startRecording}
+            disabled={!canRecord}
+            data-help-title="Record"
+            data-help="Start a 4-beat count-in, then capture every note you play (MIDI, computer keyboard, or on-screen piano) until you press Pause or Stop. Recorded notes snap to 16th notes."
+          >
             <span className="btn-icon record-icon" />
             Record
           </button>
         ) : isRecording ? (
-          <button className="btn btn-pause" onClick={pauseRecording}>
+          <button
+            className="btn btn-pause"
+            onClick={pauseRecording}
+            data-help-title="Pause"
+            data-help="Stop capturing new notes but keep what you've recorded. Press Resume to continue."
+          >
             <span className="btn-icon pause-icon" />
             Pause
           </button>
         ) : recordingState === 'paused' ? (
-          <button className="btn btn-record" onClick={startRecording}>
+          <button
+            className="btn btn-record"
+            onClick={startRecording}
+            data-help-title="Resume"
+            data-help="Resume recording with another 4-beat count-in."
+          >
             <span className="btn-icon record-icon" />
             Resume
           </button>
@@ -126,11 +146,43 @@ export default function RecordingControls() {
           className={`btn btn-metronome ${metronomeOn ? 'active' : ''}`}
           onClick={() => setMetronomeOn(!metronomeOn)}
           title="Toggle metronome"
+          data-help-title="Metronome"
+          data-help="Toggle the audible click track during the count-in and recording. Helpful for staying on the beat."
         >
           {metronomeOn ? '🔔' : '🔕'} Metronome
         </button>
 
-        <div className="tempo-control">
+        <button
+          className={`btn btn-edit ${editMode ? 'active' : ''}`}
+          onClick={() => setEditMode(!editMode)}
+          disabled={isActive}
+          title="Toggle edit mode"
+          data-help-title="Edit mode"
+          data-help={
+            'Reshape your notes directly on the piano roll. Left-click an empty cell to add a quarter note (snapped to the beat). ' +
+            'Drag a note body to move it (16th-note snap), drag its right edge to resize. ' +
+            'Right-click a note to delete it, or right-drag across notes to sweep-delete. Disabled while recording or playing.'
+          }
+        >
+          {editMode ? '\u270E Editing' : '\u270E Edit'}
+        </button>
+
+        <button
+          className={`btn btn-help ${helpMode ? 'active' : ''}`}
+          onClick={() => setHelpMode(!helpMode)}
+          title={helpMode ? 'Exit help mode (Esc)' : 'Enter help mode'}
+          aria-label="Toggle help mode"
+          data-help-title="Help mode"
+          data-help="You're in help mode. Move the pointer over any control or piano key to see what it does. Click this button again or press Esc to exit."
+        >
+          ?
+        </button>
+
+        <div
+          className="tempo-control"
+          data-help-title="Tempo"
+          data-help="Beats per minute. Changes the metronome speed, recording quantization grid, and playback speed. Locked while recording or counting in."
+        >
           <label htmlFor="tempo">BPM</label>
           <input
             id="tempo"
@@ -185,9 +237,22 @@ export default function RecordingControls() {
           className="btn btn-generate"
           onClick={() => setModalOpen(true)}
           disabled={notes.length === 0 || isGenerating || isActive}
+          data-help-title="Generate"
+          data-help="Open the generation dialog. Pick a genre, length in measures, and start measure, then the AI continues your recorded notes. Generated notes appear in purple on the piano roll."
         >
           <span className="btn-icon generate-icon">&#9733;</span>
           Generate
+        </button>
+
+        <button
+          className="btn btn-reset"
+          onClick={() => setGeneratedNotes([])}
+          disabled={generatedNotes.length === 0 || isGenerating || isActive}
+          title="Remove generated notes"
+          data-help-title="Undo generation"
+          data-help="Clear the purple AI-generated notes from the piano roll. Your recorded notes are kept."
+        >
+          &#8634; Undo Generation
         </button>
       </div>
 

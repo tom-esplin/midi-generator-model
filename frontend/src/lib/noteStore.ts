@@ -69,6 +69,8 @@ interface NoteStore {
   isPlaying: boolean;
   playbackStartedAt: number | null;
   synthConfig: SynthConfig;
+  editMode: boolean;
+  helpMode: boolean;
 
   startRecording: () => void;
   beginRecording: () => void;
@@ -85,8 +87,13 @@ interface NoteStore {
   addNote: (note: NoteEvent) => void;
   updateNote: (index: number, note: Partial<NoteEvent>) => void;
   deleteNote: (index: number) => void;
+  addGeneratedNote: (note: NoteEvent) => void;
+  updateGeneratedNote: (index: number, partial: Partial<NoteEvent>) => void;
+  deleteGeneratedNote: (index: number) => void;
 
   setGeneratedNotes: (notes: NoteEvent[]) => void;
+  setEditMode: (on: boolean) => void;
+  setHelpMode: (on: boolean) => void;
   setTempo: (tempo: number) => void;
   setCursorTime: (t: number) => void;
   setCountInBeat: (beat: number) => void;
@@ -112,6 +119,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   isPlaying: false,
   playbackStartedAt: null,
   synthConfig: { ...DEFAULT_SYNTH_CONFIG },
+  editMode: false,
+  helpMode: false,
 
   startRecording: () => {
     const { isPlaying } = get();
@@ -120,6 +129,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       recordingState: 'counting_in',
       countInBeat: 0,
       cursorTime: 0,
+      editMode: false,
     });
   },
 
@@ -161,7 +171,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const { recordingState } = get();
     if (recordingState === 'recording' || recordingState === 'counting_in') return;
     const now = performance.now() / 1000;
-    set({ isPlaying: true, playbackStartedAt: now, cursorTime: 0 });
+    set({ isPlaying: true, playbackStartedAt: now, cursorTime: 0, editMode: false });
   },
 
   stopPlayback: () => {
@@ -220,7 +230,24 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   deleteNote: (index) =>
     set((s) => ({ notes: s.notes.filter((_, i) => i !== index) })),
 
+  addGeneratedNote: (note) =>
+    set((s) => ({ generatedNotes: [...s.generatedNotes, note] })),
+
+  updateGeneratedNote: (index, partial) =>
+    set((s) => ({
+      generatedNotes: s.generatedNotes.map((n, i) =>
+        i === index ? { ...n, ...partial } : n,
+      ),
+    })),
+
+  deleteGeneratedNote: (index) =>
+    set((s) => ({
+      generatedNotes: s.generatedNotes.filter((_, i) => i !== index),
+    })),
+
   setGeneratedNotes: (notes) => set({ generatedNotes: notes }),
+  setEditMode: (on) => set({ editMode: on }),
+  setHelpMode: (on) => set({ helpMode: on }),
   setTempo: (tempo) => set({ tempo }),
   setCursorTime: (t) => set({ cursorTime: t }),
   setCountInBeat: (beat) => set({ countInBeat: beat }),

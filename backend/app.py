@@ -1,5 +1,14 @@
-from flask import Flask, request, jsonify
+import sys
+from pathlib import Path
+
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from backend.generation import VALID_GENRES, generate_continuation
 
 app = Flask(__name__)
 CORS(app)
@@ -18,38 +27,27 @@ def generate():
     if not notes:
         return jsonify({"error": "No notes provided"}), 400
 
-    beat_duration = 60.0 / tempo
-    measure_duration = beat_duration * 4
+    genre_key = genre.lower().strip()
+    if genre_key not in VALID_GENRES:
+        return jsonify({
+            "error": f"Unsupported genre '{genre}'. "
+                     f"Choose from: {', '.join(sorted(VALID_GENRES))}"
+        }), 400
 
-    # Where to place generated notes (seconds)
-    if start_measure is not None:
-        gen_start = (start_measure - 1) * measure_duration
-    else:
-        gen_start = max(n["startTime"] + n["duration"] for n in notes)
-
-    gen_length_sec = length_measures * measure_duration
-
-    # Phase 1: duplicate input notes, scaled to fit within the requested
-    # length and shifted to the start position.
-    input_start = min(n["startTime"] for n in notes)
-    input_end = max(n["startTime"] + n["duration"] for n in notes)
-    input_span = max(input_end - input_start, 0.001)
-
-    generated = []
-    for n in notes:
-        relative = (n["startTime"] - input_start) / input_span
-        new_start = gen_start + relative * gen_length_sec
-        scale = gen_length_sec / input_span
-        new_dur = n["duration"] * scale
-
-        generated.append(
-            {
-                "pitch": n["pitch"],
-                "velocity": n["velocity"],
-                "startTime": round(new_start, 6),
-                "duration": round(max(new_dur, beat_duration / 4), 6),
-            }
+    try:
+        generated = generate_continuation(
+            notes,
+            tempo=float(tempo),
+            genre=genre_key,
+            length_measures=int(length_measures),
+            start_measure=int(start_measure) if start_measure is not None else None,
         )
+    except FileNotFoundError as exc:
+        return jsonify({"error": str(exc)}), 503
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return jsonify({"error": f"Generation failed: {exc}"}), 500
 
     return jsonify({"notes": generated})
 

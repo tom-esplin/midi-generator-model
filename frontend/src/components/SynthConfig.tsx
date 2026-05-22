@@ -63,7 +63,13 @@ export default function SynthConfig() {
 
   return (
     <div className="synth-config-wrapper">
-      <button className="btn sc-toggle" onClick={() => setOpen(!open)} title="Synth Settings">
+      <button
+        className="btn sc-toggle"
+        onClick={() => setOpen(!open)}
+        title="Synth Settings"
+        data-help-title="Synth Config"
+        data-help="Sculpt the sound used to play back notes: oscillator type, ADSR envelope, filter, reverb, delay, chorus, and distortion. Changes are applied in real time."
+      >
         <span className="sc-gear">&#9881;</span> Synth Config
       </button>
 

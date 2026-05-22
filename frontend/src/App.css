@@ -81,6 +81,75 @@
   position: relative;
 }
 
+.piano-roll.edit-mode {
+  outline: 2px solid #7c3aed50;
+  outline-offset: -1px;
+}
+
+/* Pencil cursor for edit mode. Hot-spot is at the pencil tip (3, 21). */
+.piano-roll.edit-mode .pr-grid {
+  cursor: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M3 17.25V21H6.75L17.81 9.94 14.06 6.19 3 17.25ZM20.71 7.04c.39-.39.39-1.02 0-1.41L18.37 3.29c-.39-.39-1.02-.39-1.41 0L15.13 5.12 18.88 8.87 20.71 7.04Z' fill='%23fbbf24' stroke='%230f0f1a' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E") 3 21, crosshair;
+}
+
+/* --- Help mode --------------------------------------------- */
+body.help-mode-active,
+body.help-mode-active * {
+  cursor: help !important;
+}
+
+.help-mode-banner {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  color: #fff;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(124, 58, 237, 0.4);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  pointer-events: none;
+}
+
+.help-mode-banner-pill {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  font-weight: 700;
+}
+
+.help-tooltip {
+  position: fixed;
+  z-index: 9998;
+  background: #0f0f1aee;
+  color: #e2e8f0;
+  border: 1px solid #7c3aed80;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.help-tooltip-title {
+  font-weight: 700;
+  color: #a78bfa;
+  margin-bottom: 0.2rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.help-tooltip-body {
+  color: #cbd5e1;
+}
+
 .pr-labels {
   width: 44px;
   overflow: hidden;
@@ -236,6 +305,41 @@
   color: #22d3ee;
 }
 
+.btn-edit {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+.btn-edit.active {
+  border-color: #a78bfa;
+  color: #a78bfa;
+  background: #2e106550;
+}
+
+.btn-help {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 0.95rem;
+  width: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-help:hover {
+  border-color: #a78bfa;
+  color: #a78bfa;
+}
+.btn-help.active {
+  border-color: #a78bfa;
+  color: #a78bfa;
+  background: #2e106550;
+  box-shadow: 0 0 0 2px #7c3aed40;
+}
+
 .beat-display {
   padding: 0.5rem 0;
 }
@@ -310,14 +414,6 @@
   color: #f59e0b;
   border: 1px solid #f59e0b60;
   cursor: wait;
-}
-
-.btn-guide-toggle {
-  background: transparent;
-  border: 1px solid #334155;
-  color: #94a3b8;
-  font-size: 0.82rem;
-  padding: 0.4rem 0.8rem;
 }
 
 .tempo-control {
@@ -698,6 +794,14 @@
 /* --- Keyboard Guide ---------------------------------------- */
 .keyboard-guide {
   text-align: center;
+}
+
+.btn-guide-toggle {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  font-size: 0.82rem;
+  padding: 0.4rem 0.8rem;
 }
 
 .guide-panel {

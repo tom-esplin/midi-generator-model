@@ -20,7 +20,12 @@ export default function KeyboardGuide({ baseOctave, velocity }: KeyboardGuidePro
 
   return (
     <div className="keyboard-guide">
-      <button className="btn btn-guide-toggle" onClick={() => setOpen(!open)}>
+      <button
+        className="btn btn-guide-toggle"
+        onClick={() => setOpen(!open)}
+        data-help-title="Keyboard guide"
+        data-help="Show or hide the full Ableton-style computer-keyboard mapping reference."
+      >
         {open ? 'Hide' : 'Show'} Keyboard Guide
       </button>
       {open && (

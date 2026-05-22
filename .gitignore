@@ -3,3 +3,5 @@ prepared_data/
 tokenization/saved_tokens/
 *.mid
 .env
+*.cpython*
+*.pt

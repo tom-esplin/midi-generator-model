@@ -13,6 +13,8 @@ const CANVAS_HEIGHT = TOTAL_ROWS * ROW_HEIGHT;
 const BEATS_PER_MEASURE = 4;
 const WIDTH_CHUNK = 800;
 const MIN_WIDTH = BEATS_PER_MEASURE * 16 * PIXELS_PER_BEAT;
+const EDGE_HIT_PX = 6;
+const DEFAULT_VELOCITY = 100;
 
 const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
 
@@ -31,9 +33,83 @@ const GEN_FILL = '#a78bfa';
 const GEN_STROKE = '#7c3aed';
 const CURSOR_CLR = '#ef4444d0';
 
+type NoteSource = 'notes' | 'generatedNotes';
+
+type HitTarget =
+  | { kind: 'note'; source: NoteSource; index: number; zone: 'body' | 'right-edge' }
+  | { kind: 'empty' };
+
+type DragState = {
+  kind: 'move' | 'resize';
+  source: NoteSource;
+  index: number;
+  startX: number;
+  startY: number;
+  origNote: NoteEvent;
+};
+
+function snapTime(t: number, sixteenth: number): number {
+  return Math.max(0, Math.round(t / sixteenth) * sixteenth);
+}
+
+function screenToGrid(
+  clientX: number,
+  clientY: number,
+  grid: HTMLDivElement,
+  pxPerSec: number,
+) {
+  const rect = grid.getBoundingClientRect();
+  const x = clientX - rect.left + grid.scrollLeft;
+  const y = clientY - rect.top + grid.scrollTop;
+  const time = x / pxPerSec;
+  const pitch = MAX_PITCH - 1 - Math.floor(y / ROW_HEIGHT);
+  return { x, y, time, pitch };
+}
+
+function hitTest(
+  x: number,
+  y: number,
+  notes: NoteEvent[],
+  generatedNotes: NoteEvent[],
+  pxPerSec: number,
+): HitTarget {
+  const checkList = (
+    list: NoteEvent[],
+    source: NoteSource,
+  ): HitTarget | null => {
+    for (let i = list.length - 1; i >= 0; i--) {
+      const n = list[i];
+      const row = MAX_PITCH - 1 - n.pitch;
+      if (row < 0 || row >= TOTAL_ROWS) continue;
+      const nx = n.startTime * pxPerSec;
+      const nw = Math.max(n.duration * pxPerSec, 4);
+      const ny = row * ROW_HEIGHT;
+      const nh = ROW_HEIGHT;
+      if (x < nx || x > nx + nw || y < ny || y > ny + nh) continue;
+      const zone = x >= nx + nw - EDGE_HIT_PX ? 'right-edge' : 'body';
+      return { kind: 'note', source, index: i, zone };
+    }
+    return null;
+  };
+
+  const recorded = checkList(notes, 'notes');
+  if (recorded) return recorded;
+  const generated = checkList(generatedNotes, 'generatedNotes');
+  if (generated) return generated;
+  return { kind: 'empty' };
+}
+
+function cursorForHit(hit: HitTarget): string {
+  // For 'empty' we return '' so the CSS pencil cursor (set on
+  // .piano-roll.edit-mode .pr-grid) shows through. Inline styles win otherwise.
+  if (hit.kind === 'empty') return '';
+  if (hit.zone === 'right-edge') return 'ew-resize';
+  return 'grab';
+}
+
 // ── Static grid rendered to an offscreen canvas ──────────────
 
-function buildGrid(width: number, tempo: number, dpr: number): HTMLCanvasElement {
+function buildGrid(width: number, _tempo: number, dpr: number): HTMLCanvasElement {
   const c = document.createElement('canvas');
   c.width = width * dpr;
   c.height = CANVAS_HEIGHT * dpr;
@@ -111,13 +187,46 @@ export default function PianoRoll() {
   const lastScrollX = useRef(0);
   const rafRef = useRef<number | null>(null);
   const gridCache = useRef<{ canvas: HTMLCanvasElement; key: string } | null>(null);
+  const dragRef = useRef<DragState | null>(null);
+  const rightDragRef = useRef(false);
 
-  // Only used for the placeholder overlay (changes rarely)
-  const hasContent = useNoteStore((s) => s.notes.length > 0 || s.generatedNotes.length > 0);
+  const editMode = useNoteStore((s) => s.editMode);
+
   const showPlaceholder = useNoteStore(
     (s) => s.notes.length === 0 && s.generatedNotes.length === 0
            && s.recordingState !== 'recording' && !s.isPlaying,
   );
+
+  const canEdit = useCallback(() => {
+    const s = useNoteStore.getState();
+    return (
+      s.editMode
+      && s.recordingState !== 'recording'
+      && s.recordingState !== 'counting_in'
+      && !s.isPlaying
+    );
+  }, []);
+
+  const applyNoteUpdate = useCallback(
+    (source: NoteSource, index: number, partial: Partial<NoteEvent>) => {
+      const store = useNoteStore.getState();
+      if (source === 'notes') {
+        store.updateNote(index, partial);
+      } else {
+        store.updateGeneratedNote(index, partial);
+      }
+    },
+    [],
+  );
+
+  const deleteNoteAt = useCallback((source: NoteSource, index: number) => {
+    const store = useNoteStore.getState();
+    if (source === 'notes') {
+      store.deleteNote(index);
+    } else {
+      store.deleteGeneratedNote(index);
+    }
+  }, []);
 
   // rAF draw loop — reads store directly, no React re-renders
   useEffect(() => {
@@ -153,11 +262,10 @@ export default function PianoRoll() {
 
       const state = useNoteStore.getState();
       const ct = cursorTimeRef.current;
-      const { notes, generatedNotes, tempo, recordingState, isPlaying, activeNotes } = state;
+      const { notes, generatedNotes, tempo, recordingState, isPlaying, activeNotes, editMode: em } = state;
       const showCursor = recordingState === 'recording' || isPlaying;
       const pxPerSec = PIXELS_PER_BEAT * (tempo / 60);
 
-      // Content width — snap to chunks so the grid cache is reused across frames
       const maxEnd = [...notes, ...generatedNotes].reduce(
         (m, n) => Math.max(m, n.startTime + n.duration), 0,
       );
@@ -165,7 +273,6 @@ export default function PianoRoll() {
       const rawWidth = Math.max(maxEnd * pxPerSec + 400, cursorPx + 400, MIN_WIDTH);
       const contentWidth = Math.ceil(rawWidth / WIDTH_CHUNK) * WIDTH_CHUNK;
 
-      // Resize canvas only when needed
       const targetW = Math.round(contentWidth * dpr);
       const targetH = Math.round(CANVAS_HEIGHT * dpr);
       if (canvas.width !== targetW || canvas.height !== targetH) {
@@ -179,7 +286,6 @@ export default function PianoRoll() {
       if (!ctx) return;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Grid from cache
       const gridKey = `${contentWidth}:${tempo}`;
       let gc = gridCache.current;
       if (!gc || gc.key !== gridKey) {
@@ -188,11 +294,9 @@ export default function PianoRoll() {
       }
       ctx.drawImage(gc.canvas, 0, 0, contentWidth, CANVAS_HEIGHT);
 
-      // Committed notes
       for (const n of notes) drawBlock(ctx, n, NOTE_FILL, NOTE_STROKE, pxPerSec);
       for (const n of generatedNotes) drawBlock(ctx, n, GEN_FILL, GEN_STROKE, pxPerSec);
 
-      // Active (held) notes — draw live as they're held
       if (recordingState === 'recording') {
         activeNotes.forEach((info, pitch) => {
           const row = MAX_PITCH - 1 - pitch;
@@ -211,7 +315,6 @@ export default function PianoRoll() {
           ctx.stroke();
         });
       } else if (activeNotes.size > 0) {
-        // Preview held notes as small highlights near the left edge of the viewport
         const sc = gridRef.current;
         const viewLeft = sc ? sc.scrollLeft : 0;
         const previewX = viewLeft + 8;
@@ -231,14 +334,19 @@ export default function PianoRoll() {
         });
       }
 
-      // Cursor line
       if (showCursor) {
         const cx = ct * pxPerSec;
         ctx.fillStyle = CURSOR_CLR;
         ctx.fillRect(cx - 1, 0, 2.5, CANVAS_HEIGHT);
       }
 
-      // Auto-scroll to keep cursor visible
+      if (em && !showCursor) {
+        ctx.font = '10px Inter, system-ui, sans-serif';
+        ctx.fillStyle = '#a78bfa90';
+        ctx.textBaseline = 'top';
+        ctx.fillText('EDIT', contentWidth - 36, 4);
+      }
+
       if (showCursor && gridRef.current) {
         const sc = gridRef.current;
         const cx = ct * pxPerSec;
@@ -255,9 +363,8 @@ export default function PianoRoll() {
     return () => {
       if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
     };
-  }, []); // stable — reads everything from store/ref
+  }, []);
 
-  // Initial vertical scroll → center on C4 (deferred so canvas is sized first)
   useEffect(() => {
     if (didInitScroll.current) return;
     const frame = requestAnimationFrame(() => {
@@ -277,6 +384,155 @@ export default function PianoRoll() {
   const handleGridScroll = useCallback(() => {
     if (gridRef.current && labelRef.current) {
       labelRef.current.scrollTop = gridRef.current.scrollTop;
+    }
+  }, []);
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!canEdit() || !gridRef.current) return;
+      const grid = gridRef.current;
+      const { tempo, notes, generatedNotes } = useNoteStore.getState();
+      const pxPerSec = PIXELS_PER_BEAT * (tempo / 60);
+      const beatDuration = 60 / tempo;
+      const { x, y, time, pitch } = screenToGrid(e.clientX, e.clientY, grid, pxPerSec);
+      const hit = hitTest(x, y, notes, generatedNotes, pxPerSec);
+
+      if (e.button === 2) {
+        e.preventDefault();
+        rightDragRef.current = true;
+        grid.style.cursor = 'not-allowed';
+        if (hit.kind === 'note') {
+          deleteNoteAt(hit.source, hit.index);
+        }
+        return;
+      }
+
+      if (e.button !== 0) return;
+
+      if (hit.kind === 'empty') {
+        const clampedPitch = Math.max(MIN_PITCH, Math.min(MAX_PITCH - 1, pitch));
+        const beatStart = Math.max(0, Math.floor(time / beatDuration) * beatDuration);
+        const note: NoteEvent = {
+          pitch: clampedPitch,
+          velocity: DEFAULT_VELOCITY,
+          startTime: beatStart,
+          duration: beatDuration,
+        };
+        useNoteStore.getState().addNote(note);
+        return;
+      }
+
+      const list = hit.source === 'notes' ? notes : generatedNotes;
+      const origNote = { ...list[hit.index] };
+      dragRef.current = {
+        kind: hit.zone === 'right-edge' ? 'resize' : 'move',
+        source: hit.source,
+        index: hit.index,
+        startX: x,
+        startY: y,
+        origNote,
+      };
+      grid.style.cursor = hit.zone === 'right-edge' ? 'ew-resize' : 'grabbing';
+      e.preventDefault();
+    },
+    [canEdit, deleteNoteAt],
+  );
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      const grid = gridRef.current;
+      if (!grid) return;
+
+      if (rightDragRef.current) {
+        if (!canEdit()) {
+          rightDragRef.current = false;
+          grid.style.cursor = '';
+          return;
+        }
+        const { tempo, notes, generatedNotes } = useNoteStore.getState();
+        const pxPerSec = PIXELS_PER_BEAT * (tempo / 60);
+        const { x, y } = screenToGrid(e.clientX, e.clientY, grid, pxPerSec);
+        const hit = hitTest(x, y, notes, generatedNotes, pxPerSec);
+        if (hit.kind === 'note') {
+          deleteNoteAt(hit.source, hit.index);
+        }
+        return;
+      }
+
+      const drag = dragRef.current;
+      if (drag) {
+        const { tempo } = useNoteStore.getState();
+        const pxPerSec = PIXELS_PER_BEAT * (tempo / 60);
+        const sixteenth = 60 / tempo / 4;
+        const { x, y } = screenToGrid(e.clientX, e.clientY, grid, pxPerSec);
+        const dx = x - drag.startX;
+        const dy = y - drag.startY;
+        const orig = drag.origNote;
+
+        if (drag.kind === 'move') {
+          const dt = dx / pxPerSec;
+          const rowDelta = Math.round(dy / ROW_HEIGHT);
+          const newPitch = Math.max(
+            MIN_PITCH,
+            Math.min(MAX_PITCH - 1, orig.pitch - rowDelta),
+          );
+          const newStart = snapTime(orig.startTime + dt, sixteenth);
+          applyNoteUpdate(drag.source, drag.index, {
+            pitch: newPitch,
+            startTime: newStart,
+          });
+        } else {
+          const newDurPx = Math.max(
+            orig.duration * pxPerSec + dx,
+            sixteenth * pxPerSec,
+          );
+          const newDuration = snapTime(newDurPx / pxPerSec, sixteenth);
+          applyNoteUpdate(drag.source, drag.index, {
+            duration: Math.max(sixteenth, newDuration),
+          });
+        }
+        return;
+      }
+
+      if (!canEdit()) {
+        grid.style.cursor = '';
+        return;
+      }
+
+      const { tempo, notes, generatedNotes } = useNoteStore.getState();
+      const pxPerSec = PIXELS_PER_BEAT * (tempo / 60);
+      const { x, y } = screenToGrid(e.clientX, e.clientY, grid, pxPerSec);
+      const hit = hitTest(x, y, notes, generatedNotes, pxPerSec);
+      grid.style.cursor = cursorForHit(hit);
+    };
+
+    const onMouseUp = () => {
+      const wasDragging = dragRef.current != null || rightDragRef.current;
+      dragRef.current = null;
+      rightDragRef.current = false;
+      if (wasDragging && gridRef.current) {
+        gridRef.current.style.cursor = '';
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [canEdit, applyNoteUpdate, deleteNoteAt]);
+
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (canEdit()) e.preventDefault();
+    },
+    [canEdit],
+  );
+
+  const handleGridMouseLeave = useCallback(() => {
+    if (!dragRef.current && gridRef.current) {
+      gridRef.current.style.cursor = '';
     }
   }, []);
 
@@ -300,11 +556,26 @@ export default function PianoRoll() {
   }, []);
 
   return (
-    <div className="piano-roll">
+    <div
+      className={`piano-roll ${editMode ? 'edit-mode' : ''}`}
+      data-help-title="Piano roll"
+      data-help={
+        editMode
+          ? 'Edit mode is active. Left-click to add a quarter note, drag a note to move it, drag its right edge to resize, right-click (or right-drag) to delete.'
+          : 'Scrolling note grid showing recorded notes (blue) and AI-generated notes (purple). Enable Edit mode to modify notes directly.'
+      }
+    >
       <div className="pr-labels" ref={labelRef}>
         {labels}
       </div>
-      <div className="pr-grid" ref={gridRef} onScroll={handleGridScroll}>
+      <div
+        className="pr-grid"
+        ref={gridRef}
+        onScroll={handleGridScroll}
+        onMouseDown={handleMouseDown}
+        onContextMenu={handleContextMenu}
+        onMouseLeave={handleGridMouseLeave}
+      >
         <canvas ref={canvasRef} />
       </div>
       {showPlaceholder && (
