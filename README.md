@@ -2,6 +2,22 @@
 
 My deep learning final project, uses transformers and lstms to extend midi(Musical Instruments Digital Interface or note data) sequences as input to my synthesizer.
 
+## Deploy the web app
+
+The React app in `frontend/` is static and can be served from GitHub Pages. It calls the model server through the `VITE_API_URL` build variable.
+
+1. Host the Flask API from `backend/app.py` on an HTTPS model host such as a Hugging Face Space. The included `Dockerfile` runs the API on port `7860`, which works for Docker Spaces. The frontend expects `POST /api/generate` and `GET /api/health`.
+2. In the GitHub repository settings, add a repository variable named `VITE_API_URL` with the hosted API origin, for example `https://your-username-your-space.hf.space`.
+3. Enable GitHub Pages with GitHub Actions as the source.
+4. Run the `Deploy frontend to GitHub Pages` workflow, or merge to `main`.
+
+Local frontend development still works through the Vite proxy: run the Flask backend on port 5000 and leave `VITE_API_URL` blank.
+
+The hosted API needs the trained model artifacts that are intentionally gitignored in this repository:
+
+- `models/model_weights/*.pt`
+- `tokenization/saved_tokens/**/tokenizer.json`
+
 ## Plan
 
 My goal for the final project is to create a model that given a sequence of MIDI(musical

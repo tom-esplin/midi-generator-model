@@ -1,0 +1,11 @@
+.git
+.github
+.env
+frontend/node_modules
+frontend/dist
+raw_data
+prepared_data
+**/__pycache__
+*.cpython*
+*.mid
+*.ipynb
