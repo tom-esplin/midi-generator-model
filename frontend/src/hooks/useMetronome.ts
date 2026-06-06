@@ -13,32 +13,6 @@ export function useMetronome() {
   const clickLo = useRef<Tone.Synth | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = useNoteStore.subscribe(
-      (state, prev) => {
-        const prevPhase = prev.recordingState;
-        const curPhase = state.recordingState;
-        const tempoChanged = prev.tempo !== state.tempo;
-        const metronomeChanged = prev.metronomeOn !== state.metronomeOn;
-
-        if (curPhase === 'counting_in' && prevPhase !== 'counting_in') {
-          startCountIn(state.tempo);
-        } else if (curPhase === 'recording' && (prevPhase !== 'recording' || tempoChanged || metronomeChanged)) {
-          startMetronomeClicks(state.tempo, state.metronomeOn);
-        } else if (curPhase !== 'recording' && curPhase !== 'counting_in' &&
-                   (prevPhase === 'recording' || prevPhase === 'counting_in')) {
-          stopTicking();
-        }
-      },
-    );
-
-    return () => {
-      unsubscribe();
-      stopTicking();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   function ensureClicks() {
     if (!clickHi.current) {
       clickHi.current = new Tone.Synth({
@@ -124,4 +98,30 @@ export function useMetronome() {
       intervalRef.current = null;
     }
   }
+
+  useEffect(() => {
+    const unsubscribe = useNoteStore.subscribe(
+      (state, prev) => {
+        const prevPhase = prev.recordingState;
+        const curPhase = state.recordingState;
+        const tempoChanged = prev.tempo !== state.tempo;
+        const metronomeChanged = prev.metronomeOn !== state.metronomeOn;
+
+        if (curPhase === 'counting_in' && prevPhase !== 'counting_in') {
+          startCountIn(state.tempo);
+        } else if (curPhase === 'recording' && (prevPhase !== 'recording' || tempoChanged || metronomeChanged)) {
+          startMetronomeClicks(state.tempo, state.metronomeOn);
+        } else if (curPhase !== 'recording' && curPhase !== 'counting_in' &&
+                   (prevPhase === 'recording' || prevPhase === 'counting_in')) {
+          stopTicking();
+        }
+      },
+    );
+
+    return () => {
+      unsubscribe();
+      stopTicking();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }

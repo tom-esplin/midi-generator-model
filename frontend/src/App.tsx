@@ -83,7 +83,7 @@ export default function App() {
         </section>
       </main>
 
-      <HelpOverlay />
+      {helpMode && <HelpOverlay />}
     </div>
   );
 }

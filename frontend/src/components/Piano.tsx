@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect, useMemo, type ReactElement } from 'react';
 import { useNoteStore } from '../lib/noteStore';
 import {
   ABLETON_KEY_MAP,
@@ -58,7 +58,6 @@ export default function Piano({ baseOctave }: PianoProps) {
     const mq = window.matchMedia(`(max-width: ${BREAKPOINT - 1}px)`);
     const onChange = (e: MediaQueryListEvent) => setIsSmall(e.matches);
     mq.addEventListener('change', onChange);
-    setIsSmall(mq.matches);
     return () => mq.removeEventListener('change', onChange);
   }, []);
 
@@ -84,7 +83,7 @@ export default function Piano({ baseOctave }: PianoProps) {
     return out;
   }, [baseOctave]);
 
-  const keys: JSX.Element[] = [];
+  const keys: ReactElement[] = [];
   for (let midi = firstMidi; midi <= lastMidi; midi++) {
     const note = midiToNoteName(midi);
     const keyLabel = midiToKeyLabel[midi];

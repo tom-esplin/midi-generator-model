@@ -14,14 +14,17 @@ export interface SynthChain {
 export function buildSynthChain(cfg: SynthConfig): SynthChain {
   Tone.getContext().lookAhead = 0.01;
 
-  const synth = new Tone.PolySynth(Tone.Synth, {
+  const synth = new Tone.PolySynth({
+    voice: Tone.Synth,
     maxPolyphony: 16,
-    oscillator: { type: cfg.instrument },
-    envelope: {
-      attack: cfg.attack,
-      decay: cfg.decay,
-      sustain: cfg.sustain,
-      release: cfg.release,
+    options: {
+      oscillator: { type: cfg.instrument },
+      envelope: {
+        attack: cfg.attack,
+        decay: cfg.decay,
+        sustain: cfg.sustain,
+        release: cfg.release,
+      },
     },
   });
 

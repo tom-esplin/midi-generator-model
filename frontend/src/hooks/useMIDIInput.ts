@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useNoteStore } from '../lib/noteStore';
 
 export function useMIDIInput() {
-  const [midiAccess, setMidiAccess] = useState<MIDIAccess | null>(null);
   const [deviceName, setDeviceName] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const midiSupported = 'requestMIDIAccess' in navigator;
+  const [error, setError] = useState<string | null>(
+    midiSupported ? null : 'Web MIDI API not supported in this browser',
+  );
   const storeRef = useRef(useNoteStore.getState());
 
   useEffect(() => {
@@ -14,17 +16,15 @@ export function useMIDIInput() {
   }, []);
 
   useEffect(() => {
-    if (!navigator.requestMIDIAccess) {
-      setError('Web MIDI API not supported in this browser');
-      return;
-    }
+    if (!midiSupported) return;
 
     let cancelled = false;
+    let accessRef: MIDIAccess | null = null;
 
     navigator.requestMIDIAccess().then(
       (access) => {
         if (cancelled) return;
-        setMidiAccess(access);
+        accessRef = access;
 
         const handleMessage = (e: MIDIMessageEvent) => {
           const [status, note, velocity] = e.data!;
@@ -59,14 +59,14 @@ export function useMIDIInput() {
 
     return () => {
       cancelled = true;
-      if (midiAccess) {
-        midiAccess.inputs.forEach((input) => {
+      if (accessRef) {
+        accessRef.onstatechange = null;
+        accessRef.inputs.forEach((input) => {
           input.onmidimessage = null;
         });
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [midiSupported]);
 
   return { deviceName, error };
 }

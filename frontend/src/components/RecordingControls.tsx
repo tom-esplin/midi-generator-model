@@ -268,12 +268,14 @@ export default function RecordingControls() {
         </span>
       </div>
 
-      <GenerateModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onGenerate={handleGenerate}
-        isGenerating={isGenerating}
-      />
+      {modalOpen && (
+        <GenerateModal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onGenerate={handleGenerate}
+          isGenerating={isGenerating}
+        />
+      )}
     </div>
   );
 }

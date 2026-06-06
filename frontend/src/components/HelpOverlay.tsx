@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNoteStore } from '../lib/noteStore';
 
 interface Tip {
   x: number;
@@ -14,20 +13,14 @@ const TOOLTIP_MAX_WIDTH = 280;
 const TOOLTIP_FALLBACK_HEIGHT = 80;
 
 export default function HelpOverlay() {
-  const helpMode = useNoteStore((s) => s.helpMode);
   const [tip, setTip] = useState<Tip | null>(null);
 
   useEffect(() => {
-    document.body.classList.toggle('help-mode-active', helpMode);
+    document.body.classList.add('help-mode-active');
     return () => document.body.classList.remove('help-mode-active');
-  }, [helpMode]);
+  }, []);
 
   useEffect(() => {
-    if (!helpMode) {
-      setTip(null);
-      return;
-    }
-
     const onMove = (e: MouseEvent) => {
       const target = (e.target as HTMLElement | null)?.closest<HTMLElement>('[data-help]');
       if (!target) {
@@ -60,9 +53,7 @@ export default function HelpOverlay() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseleave', onLeave);
     };
-  }, [helpMode]);
-
-  if (!helpMode) return null;
+  }, []);
 
   return (
     <>
