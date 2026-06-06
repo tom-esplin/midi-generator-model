@@ -27,8 +27,13 @@ export function useKeyboardInput() {
   const octaveRef = useRef(baseOctave);
   const velocityRef = useRef(velocity);
 
-  octaveRef.current = baseOctave;
-  velocityRef.current = velocity;
+  useEffect(() => {
+    octaveRef.current = baseOctave;
+  }, [baseOctave]);
+
+  useEffect(() => {
+    velocityRef.current = velocity;
+  }, [velocity]);
 
   useEffect(() => {
     return useNoteStore.subscribe((s) => {

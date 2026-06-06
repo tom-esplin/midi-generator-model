@@ -58,7 +58,6 @@ export default function Piano({ baseOctave }: PianoProps) {
     const mq = window.matchMedia(`(max-width: ${BREAKPOINT - 1}px)`);
     const onChange = (e: MediaQueryListEvent) => setIsSmall(e.matches);
     mq.addEventListener('change', onChange);
-    setIsSmall(mq.matches);
     return () => mq.removeEventListener('change', onChange);
   }, []);
 

@@ -34,12 +34,6 @@ export default function GenerateModal({ open, onClose, onGenerate, isGenerating 
   const [startMeasure, setStartMeasure] = useState(totalInputMeasures + 1);
 
   useEffect(() => {
-    if (open) {
-      setStartMeasure(totalInputMeasures + 1);
-    }
-  }, [open, totalInputMeasures]);
-
-  useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
