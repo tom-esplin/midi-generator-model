@@ -1038,3 +1038,200 @@ body.help-mode-active * {
   padding-top: 0.5rem;
   border-top: 1px solid #2a2a4a;
 }
+
+/* --- Mobile first-pass tuning ------------------------------ */
+@media (max-width: 768px), (pointer: coarse) {
+  .app {
+    overflow-x: hidden;
+  }
+
+  .app-header {
+    padding: 1rem 0.75rem 0.75rem;
+  }
+
+  .app-title {
+    font-size: 1.55rem;
+  }
+
+  .app-subtitle {
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .header-badges {
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .midi-badge {
+    font-size: 0.72rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-main {
+    gap: 0.85rem;
+    padding: 0.85rem;
+  }
+
+  .controls-container {
+    padding: 0.85rem;
+    gap: 0.7rem;
+  }
+
+  .controls-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+    align-items: stretch;
+  }
+
+  .btn {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.9rem;
+  }
+
+  .btn-generate {
+    padding: 0.75rem 0.85rem;
+    font-size: 0.95rem;
+  }
+
+  .btn-help {
+    display: none;
+  }
+
+  .tempo-control {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    margin-left: 0;
+    min-height: 44px;
+    padding: 0 0.1rem;
+  }
+
+  .tempo-control input {
+    min-height: 40px;
+    width: 84px;
+    font-size: 1rem;
+  }
+
+  .beat-counter {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+  }
+
+  .beat-measure {
+    min-width: auto;
+  }
+
+  .status-bar {
+    flex-wrap: wrap;
+    gap: 0.5rem 0.8rem;
+  }
+
+  .section-piano {
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+
+  .synth-config-wrapper {
+    margin-bottom: 0.5rem;
+  }
+
+  .sc-panel {
+    max-height: 50vh;
+    box-sizing: border-box;
+  }
+
+  .piano-container {
+    min-width: max-content;
+    height: 156px;
+    justify-content: flex-start;
+    padding: 0 0.25rem;
+  }
+
+  .piano-key.white {
+    width: 46px;
+    height: 156px;
+  }
+
+  .piano-key.black {
+    width: 30px;
+    height: 98px;
+    margin-left: -15px;
+    margin-right: -15px;
+  }
+
+  .piano-roll {
+    height: min(340px, 42vh);
+    border-radius: 10px;
+  }
+
+  .piano-roll-mobile .pr-grid {
+    touch-action: pan-x pan-y;
+  }
+
+  .piano-roll.edit-mode .pr-grid {
+    touch-action: none;
+  }
+
+  .pr-labels {
+    width: 38px;
+  }
+
+  .pr-placeholder {
+    padding: 0 1rem;
+    text-align: center;
+    font-size: 0.82rem;
+  }
+
+  .guide-panel {
+    overflow-x: auto;
+  }
+
+  .guide-row,
+  .guide-controls-row,
+  .guide-status {
+    justify-content: flex-start;
+    min-width: max-content;
+  }
+
+  .modal-backdrop {
+    align-items: flex-start;
+    padding: 0.75rem;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+
+  .modal-panel {
+    max-width: none;
+    width: 100%;
+    max-height: calc(100vh - 1.5rem);
+    overflow-y: auto;
+    border-radius: 14px;
+  }
+
+  .modal-header {
+    padding: 1rem 1rem 0.7rem;
+  }
+
+  .modal-body {
+    padding: 1rem;
+    gap: 0.85rem;
+  }
+
+  .modal-field select,
+  .modal-field input {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+  }
+}
