@@ -179,7 +179,11 @@ function buildGrid(width: number, _tempo: number, dpr: number): HTMLCanvasElemen
 
 // ── Component ────────────────────────────────────────────────
 
-export default function PianoRoll() {
+interface Props {
+  isMobile: boolean;
+}
+
+export default function PianoRoll({ isMobile }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const labelRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -198,6 +202,7 @@ export default function PianoRoll() {
   );
 
   const canEdit = useCallback(() => {
+    if (isMobile) return false;
     const s = useNoteStore.getState();
     return (
       s.editMode
@@ -205,7 +210,7 @@ export default function PianoRoll() {
       && s.recordingState !== 'counting_in'
       && !s.isPlaying
     );
-  }, []);
+  }, [isMobile]);
 
   const applyNoteUpdate = useCallback(
     (source: NoteSource, index: number, partial: Partial<NoteEvent>) => {
@@ -557,12 +562,14 @@ export default function PianoRoll() {
 
   return (
     <div
-      className={`piano-roll ${editMode ? 'edit-mode' : ''}`}
+      className={`piano-roll ${isMobile ? 'piano-roll-mobile' : ''} ${editMode && !isMobile ? 'edit-mode' : ''}`}
       data-help-title="Piano roll"
       data-help={
-        editMode
+        editMode && !isMobile
           ? 'Edit mode is active. Left-click to add a quarter note, drag a note to move it, drag its right edge to resize, right-click (or right-drag) to delete.'
-          : 'Scrolling note grid showing recorded notes (blue) and AI-generated notes (purple). Enable Edit mode to modify notes directly.'
+          : isMobile
+            ? 'Scrolling note grid showing recorded notes (blue) and AI-generated notes (purple). Precision editing is disabled on mobile.'
+            : 'Scrolling note grid showing recorded notes (blue) and AI-generated notes (purple). Enable Edit mode to modify notes directly.'
       }
     >
       <div className="pr-labels" ref={labelRef}>

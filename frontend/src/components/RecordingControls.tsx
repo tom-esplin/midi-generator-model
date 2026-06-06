@@ -4,7 +4,11 @@ import { useAudioPlayback } from '../hooks/useAudioPlayback';
 import { generateMidi } from '../lib/midiApi';
 import GenerateModal from './GenerateModal';
 
-export default function RecordingControls() {
+interface Props {
+  isMobile: boolean;
+}
+
+export default function RecordingControls({ isMobile }: Props) {
   const recordingState = useNoteStore((s) => s.recordingState);
   const notes = useNoteStore((s) => s.notes);
   const generatedNotes = useNoteStore((s) => s.generatedNotes);
@@ -82,6 +86,7 @@ export default function RecordingControls() {
   const hasNotes = notes.length > 0 || generatedNotes.length > 0;
   const canRecord = !isPlaying;
   const canPlay = hasNotes && !isRecording && !isCountingIn && !isPlaying;
+  const canEdit = !isActive && !isMobile;
 
   const beatDuration = 60 / tempo;
   const currentBeat = cursorTime / beatDuration;
@@ -153,30 +158,34 @@ export default function RecordingControls() {
         </button>
 
         <button
-          className={`btn btn-edit ${editMode ? 'active' : ''}`}
+          className={`btn btn-edit ${editMode && !isMobile ? 'active' : ''}`}
           onClick={() => setEditMode(!editMode)}
-          disabled={isActive}
-          title="Toggle edit mode"
+          disabled={!canEdit}
+          title={isMobile ? 'Edit mode is disabled on mobile' : 'Toggle edit mode'}
           data-help-title="Edit mode"
           data-help={
-            'Reshape your notes directly on the piano roll. Left-click an empty cell to add a quarter note (snapped to the beat). ' +
-            'Drag a note body to move it (16th-note snap), drag its right edge to resize. ' +
-            'Right-click a note to delete it, or right-drag across notes to sweep-delete. Disabled while recording or playing.'
+            isMobile
+              ? 'Edit mode is disabled on mobile for better touch performance. Use a desktop pointer for precision note editing.'
+              : 'Reshape your notes directly on the piano roll. Left-click an empty cell to add a quarter note (snapped to the beat). ' +
+                'Drag a note body to move it (16th-note snap), drag its right edge to resize. ' +
+                'Right-click a note to delete it, or right-drag across notes to sweep-delete. Disabled while recording or playing.'
           }
         >
-          {editMode ? '\u270E Editing' : '\u270E Edit'}
+          {editMode && !isMobile ? '\u270E Editing' : '\u270E Edit'}
         </button>
 
-        <button
-          className={`btn btn-help ${helpMode ? 'active' : ''}`}
-          onClick={() => setHelpMode(!helpMode)}
-          title={helpMode ? 'Exit help mode (Esc)' : 'Enter help mode'}
-          aria-label="Toggle help mode"
-          data-help-title="Help mode"
-          data-help="You're in help mode. Move the pointer over any control or piano key to see what it does. Click this button again or press Esc to exit."
-        >
-          ?
-        </button>
+        {!isMobile && (
+          <button
+            className={`btn btn-help ${helpMode ? 'active' : ''}`}
+            onClick={() => setHelpMode(!helpMode)}
+            title={helpMode ? 'Exit help mode (Esc)' : 'Enter help mode'}
+            aria-label="Toggle help mode"
+            data-help-title="Help mode"
+            data-help="You're in help mode. Move the pointer over any control or piano key to see what it does. Click this button again or press Esc to exit."
+          >
+            ?
+          </button>
+        )}
 
         <div
           className="tempo-control"

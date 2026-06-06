@@ -11,11 +11,13 @@ import { useKeyboardInput } from './hooks/useKeyboardInput';
 import { useLiveAudio } from './hooks/useLiveAudio';
 import { useMetronome } from './hooks/useMetronome';
 import { useCursorAnimation } from './hooks/useCursorAnimation';
+import { useIsMobile } from './hooks/useIsMobile';
 import './App.css';
 
 export default function App() {
   const { deviceName, error: midiError } = useMIDIInput();
   const { baseOctave, velocity } = useKeyboardInput();
+  const isMobile = useIsMobile();
   const helpMode = useNoteStore((s) => s.helpMode);
   const setHelpMode = useNoteStore((s) => s.setHelpMode);
   useLiveAudio();
@@ -32,7 +34,7 @@ export default function App() {
   }, [helpMode, setHelpMode]);
 
   return (
-    <div className="app">
+    <div className={`app ${isMobile ? 'app-mobile' : 'app-desktop'}`}>
       <header className="app-header">
         <h1 className="app-title">MIDI Generator</h1>
         <p className="app-subtitle">
@@ -65,12 +67,8 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <section className="section-piano-roll">
-          <PianoRoll />
-        </section>
-
         <section className="section-controls">
-          <RecordingControls />
+          <RecordingControls isMobile={isMobile} />
         </section>
 
         <section className="section-piano">
@@ -78,12 +76,16 @@ export default function App() {
           <Piano baseOctave={baseOctave} />
         </section>
 
+        <section className="section-piano-roll">
+          <PianoRoll isMobile={isMobile} />
+        </section>
+
         <section className="section-guide">
           <KeyboardGuide baseOctave={baseOctave} velocity={velocity} />
         </section>
       </main>
 
-      {helpMode && <HelpOverlay />}
+      {!isMobile && helpMode && <HelpOverlay />}
     </div>
   );
 }
