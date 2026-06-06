@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useCallback, useMemo, type ReactElement } from 'react';
 import { useNoteStore } from '../lib/noteStore';
 import { midiToNoteName } from '../lib/midiHelpers';
 import { cursorTimeRef } from '../hooks/useCursorAnimation';
@@ -537,7 +537,7 @@ export default function PianoRoll() {
   }, []);
 
   const labels = useMemo(() => {
-    const result: JSX.Element[] = [];
+    const result: ReactElement[] = [];
     for (let i = 0; i < TOTAL_ROWS; i++) {
       const pitch = MAX_PITCH - 1 - i;
       const isC = pitch % 12 === 0;
